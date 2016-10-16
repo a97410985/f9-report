@@ -43,7 +43,7 @@
 % Actual document begins below.
 \begin{document}
 
-\title{f9: A secure microkernel for MMUless embedded systems} 
+\title{F9: A secure microkernel for MMUless embedded systems}
 \maketitle
 
 \begin{abstract}\textsl{}
@@ -52,7 +52,7 @@ Internet of Things (IoT) can be see in such as vehicle, sensors nodes, smartphon
 
 The concept of microkernel can fulfill the requirements of IoT devices, but microkernel approaches such as seL4, OKL4, still need a rich hardware resource with MMU for memory management and higher power consumption.
 
-In this paper, we describe the design and implementation of f9-kernel - a microkernel based on L4 kernel family, aim to built for deeply embedded IoT devices for efficiency, security, and flexible development. F9 microkernel is optimized for ARM Cortex-M series CPU, with only 3500 lines of source code, which is the smallest microkernel in today.
+In this paper, we describe the design and implementation of F9 microkernel - a microkernel based on L4 kernel family, intended to built for deeply embedded IoT devices for efficiency, security, and flexible development. F9 microkernel is optimized for ARM Cortex-M series CPU, with only 3500 lines of source code, which is the smallest microkernel in today.
 
 \end{abstract}
 
@@ -60,15 +60,11 @@ In this paper, we describe the design and implementation of f9-kernel - a microk
 
 An OS for IoT devices should at lease fulfill the reliability\cite{baccelli2013riot}. Research in operating systems shows that monolithic kernel such as Linux kernel\cite{chou2001empirical} and Microsoft Windows NT\cite{swift2005improving} are making errors from drivers, and Heiser state that larger trusted computing base (TCB) cannot be made trustworthy, the key to a trustworthy TCB is a very small kernel\cite{heiser2005secure}, thus we are aim to use microkernel to fulfill reliability.
 
-In microkernel, kernel only provides three mechanisms: IPC, Memory Management and thread management, and these mechanisms can be used to build up the services, for example file systems or device drivers, which can provide complete functions for unprivileged applications. 
+In microkernel, kernel only provides three mechanisms: IPC, Memory Management and thread management, and these mechanisms can be used to build up the services, for example file systems or device drivers, which can provide complete functions for unprivileged applications\ref{fig:kernel_diff}.
 
-The history of microkernel can be date back to 1969s, and have developed in 3 generations: (i) Mach, (ii) L3 \& L4, improving IPC performance, written in assembly (iii) seL4, Fiasco.OC, NOVA, platform independence and formal verification, security, SMP, etc. 
+The history of microkernel can be date back to 1969s, and have developed in 3 generations: (i) Mach, (ii) L3 \& L4, improving IPC performance, written in assembly (iii) seL4, Fiasco.OC, NOVA, platform independence and formal verification, security, SMP, etc. These microkernels needs to run on the platform which have Memory Management Unit, but in low-power consumption IoT device, it is often that the CPU doesn't provide MMU.
 
-
-
-\section{Background of L4 microkernel}
-
-Microkernel is a concept to build an minimality kernel, and f9-kernel is based on the L4 kernel, the basic mechanisms can be devided into three parts: inter-process communication (IPC), thread management, and low-level address space management.
+The ARM Cortex-M CPU series is the most widely used CPU in low-power consumption IoT devices, as for 2016, it has shipped more than 11 billion Cortex-M CPU in the market. These processors has high performance and low-power consumption, but were lack of conventional Memory Management Unit, which limits their ability to run traditional operating systems with (paged) memory protection. Instead, F9 microkernel is designed to use the Cortex-M Memory Protection Unit to provide memory isolation.
 
 \begin{figure}[H]
 	\begin{center}
@@ -77,6 +73,11 @@ Microkernel is a concept to build an minimality kernel, and f9-kernel is based o
 	\caption{kernel space service is split out to user space in microkernel \cite{heiser2012}}
 	\label{fig:kernel_diff}
 \end{figure}
+
+
+\section{Background of microkernel}
+
+\subsection{History of L4 kernel family}
 
 
 \subsection{Inter-Process Communication}
@@ -241,25 +242,6 @@ The thread scheduler in f9-kernel have the responsibility to select new thread f
 
 So now we are trying to create a pluggable scheduler framework on f9-kernel.  Fi-asco.OC has similar approach\cite{elphinstone2013l3,fiasco}.
 
-\section{Implementation techniques}
-
-實際上有很多限制，in deterministic, microscope 最佳化, 又要系統很好維護
-robert love, 
-
-\subsection{sorting}
-f9-kernel sort routines is token from BSD\cite{bentley1993engineering}, BSD approach found that swapping is the most sensitive issue in sorting. It have conqure the problem that sorting in differnet width data size. Also f9-kernel implement sort by heapsort to prevent quick sort worst case in $\mathcal{O}(n \times n)$ , make the sorting time is $\mathcal{O}(n\log{}n)$  both on average and worst-case.
-
-\subsection{memcpy, duff's device}
-f9-kernel memcpy was derive from MUSL libc project\cite{felker}, it using the technique from "Duff's device", also called "loop unrolling" to improve the performance of memcpy. The future work is to rewrite memcpy code in ARM Thumb-2 to improve performance.
-
-\subsection{Init hooks}
-
-f9-kernel used an techqunie call "Initialize hooks", this technique can let developer write code in kernel and assign to run the code in specific stage when kernel is initializing.
-
-f9-kernel provide an API \verb|INIT_HOOK(hook, level)|, this is a syntactic sugar that will convert into an const \verb|init_struct|, which will then put in section \verb|.init_hook|, in linker script it will define \verb|init_hook| start and end position, it will be an linear address for all init hook define by developer.
-
-In booting stage, kernel will try to execute these hook by \verb|run_init_hook(level)|, this function will then scan the \verb|init_hook| region from start to end, if it found the proper level to execute, it will then execute the hook. Also, when multiple hooks are in the same level, this approach won't guarantee the order to execute hooks.
-
 \subsection{Ksymbol maps and Kprobe}
 f9-kernel using an elegant method to dump out symbol from kernel and let kernel can using these symbol information such as function address and symbol name in runtime. When building the entire kernel, build system will first compile all component then linked to a non-symbol elf kernel file, then the special make scripts which build for covert elf to symbol map file, will using GNU toolchain "nm" tool to dump all symbols out of the kernel into a pre-define c template. After all, it compile and linked the non-symbol kernel and symbol map which set into the \texttt{.sym\_tab} section.
 
@@ -280,12 +262,12 @@ probed function. But as metion below, f9-kernel already implement the infrastruc
 \begin{lstlisting}[basicstyle=\small,frame=single]
 /* Linux kernel */
 struct kprobe kp = {
-    .symbol_name    = "_do_fork",
+.symbol_name    = "_do_fork",
 };
 
 /* f9-kernel */
 struct kprobe kp = {
-    .addr    = ktimer_handler
+.addr    = ktimer_handler
 };
 
 \end{lstlisting}
@@ -306,6 +288,24 @@ In tickless scheduing mode, kernel will enter tickless right before doing to CPU
 	\caption{Tickless scheduling in f9-kernel}
 \end{figure}
 
+\section{Implementation techniques}
+
+實際上有很多限制，in deterministic, microscope 最佳化, 又要系統很好維護
+robert love,
+
+\subsection{sorting}
+f9-kernel sort routines is token from BSD\cite{bentley1993engineering}, BSD approach found that swapping is the most sensitive issue in sorting. It have conqure the problem that sorting in differnet width data size. Also f9-kernel implement sort by heapsort to prevent quick sort worst case in $\mathcal{O}(n \times n)$ , make the sorting time is $\mathcal{O}(n\log{}n)$  both on average and worst-case.
+
+\subsection{memcpy, duff's device}
+f9-kernel memcpy was derive from MUSL libc project\cite{felker}, it using the technique from "Duff's device", also called "loop unrolling" to improve the performance of memcpy. The future work is to rewrite memcpy code in ARM Thumb-2 to improve performance.
+
+\subsection{Init hooks}
+
+f9-kernel used an techqunie call "Initialize hooks", this technique can let developer write code in kernel and assign to run the code in specific stage when kernel is initializing.
+
+f9-kernel provide an API \verb|INIT_HOOK(hook, level)|, this is a syntactic sugar that will convert into an const \verb|init_struct|, which will then put in section \verb|.init_hook|, in linker script it will define \verb|init_hook| start and end position, it will be an linear address for all init hook define by developer.
+
+In booting stage, kernel will try to execute these hook by \verb|run_init_hook(level)|, this function will then scan the \verb|init_hook| region from start to end, if it found the proper level to execute, it will then execute the hook. Also, when multiple hooks are in the same level, this approach won't guarantee the order to execute hooks.
 
 \subsection{bit-band and Ktable}
 ARM Cortex-M provide an atomic access method call "Bit-banding", Bit-banding mechanisms is the device takes a region of memory (the Bit-band region) and maps each bit in that region to an entire word in a second memory region (the Bit-band Alias Region).\cite{schaenzle2013}
