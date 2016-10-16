@@ -43,7 +43,7 @@
 % Actual document begins below.
 \begin{document}
 
-\title{f9: A secure microkernel for MMUless embedded systems} 
+\title{F9: A secure microkernel for MMUless embedded systems}
 \maketitle
 
 \begin{abstract}\textsl{}
@@ -52,7 +52,7 @@ Internet of Things (IoT) can be see in such as vehicle, sensors nodes, smartphon
 
 The concept of microkernel can fulfill the requirements of IoT devices, but microkernel approaches such as seL4, OKL4, still need a rich hardware resource with MMU for memory management and higher power consumption.
 
-In this paper, we describe the design and implementation of f9-kernel - a microkernel based on L4 kernel family, aim to built for deeply embedded IoT devices for efficiency, security, and flexible development. F9 microkernel is optimized for ARM Cortex-M series CPU, with only 3500 lines of source code, which is the smallest microkernel in today.
+In this paper, we describe the design and implementation of F9 microkernel - a microkernel based on L4 kernel family, aim to built for deeply embedded IoT devices for efficiency, security, and flexible development. F9 microkernel is optimized for ARM Cortex-M series CPU, with only 3500 lines of source code, which is the smallest microkernel in today.
 
 \end{abstract}
 
@@ -68,7 +68,7 @@ The history of microkernel can be date back to 1969s, and have developed in 3 ge
 
 \section{Background of L4 microkernel}
 
-Microkernel is a concept to build an minimality kernel, and f9-kernel is based on the L4 kernel, the basic mechanisms can be devided into three parts: inter-process communication (IPC), thread management, and low-level address space management.
+Microkernel is a concept to build an minimality kernel, and F9 microkernel is based on the L4 kernel, the basic mechanisms can be devided into three parts: inter-process communication (IPC), thread management, and low-level address space management.
 
 \begin{figure}[H]
 	\begin{center}
@@ -99,33 +99,33 @@ In modern system architectures and operating system, physical memory usually wil
 
 L4 provides the mechanism for implementing recursively-defined virtual address that are managed in user level\cite{dannowski2011l4}. Initial address space is controlled by first process, other process who derive from the first process, will obtain memory pages from first.
 
-\section{Design of f9 kernel}
+\section{Design of F9 microkernel}
 
-The f9 kernel is aim to run on the deep embedded devices, thus its goals is to make f9 kernel be efficiency and security.
+The F9 microkernel is aim to run on the deep embedded devices, thus its goals is to make F9 microkernel be efficiency and security.
 
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=\linewidth]{picture/f9_arch.png}
 	\end{center}
-	\caption{f9-kernel system architecture}
+	\caption{F9 microkernel system architecture}
 	\label{fig:f9}
 \end{figure}
 
 \subsection{Memory Management}
 
-Unlike other L4 kernels, f9-kernel focus on MPU-only platform such as ARM cortex-M CPU, so we cannot use virtual memory for memory managements. Also, the RAM was small (256 Kbytes) but a larger Physical address space (up to 32-bit) was used, including the hardware device, flash, and bit-band zone, and only have 8 memory protection unit (MPU)\cite{arm2016mpu,yiu2013definitive,st2016managing,usna2015l18}.
+Unlike other L4 kernels, F9 microkernel focus on MPU-only platform such as ARM cortex-M CPU, so we cannot use virtual memory for memory managements. Also, the RAM was small (256 Kbytes) but a larger Physical address space (up to 32-bit) was used, including the hardware device, flash, and bit-band zone, and only have 8 memory protection unit (MPU)\cite{arm2016mpu,yiu2013definitive,st2016managing,usna2015l18}.
 
-MPU is a hardware unit that can set access control permissions for a memory region. There are 8 MPU in Cortex-M CPU, each of the MPU can set individual access permission for a memory region. There is a limitation of setting memory region in MPU is that developer can only set "$2^n$" size memory region from 32 bytes to 4 Gbytes\cite{yiu2013definitive,st2016managing}. For example, setting 64 bytes memory region is valid, but setting 96 bytes memory region is invalid. Obey to this limitation, f9-kernel developed an elegant mechanism to breakthrough this limited for memory management, called fpage.
+MPU is a hardware unit that can set access control permissions for a memory region. There are 8 MPU in Cortex-M CPU, each of the MPU can set individual access permission for a memory region. There is a limitation of setting memory region in MPU is that developer can only set "$2^n$" size memory region from 32 bytes to 4 Gbytes\cite{yiu2013definitive,st2016managing}. For example, setting 64 bytes memory region is valid, but setting 96 bytes memory region is invalid. Obey to this limitation, F9 microkernel developed an elegant mechanism to breakthrough this limited for memory management, called fpage.
 
-Memory management in f9-kernel, can split into three conceptions: 1. memory pool, which represents the area of PAS with specific attributes (hardcoded in mem map table). 2. flexible page - unlike traditional pages in L4, fpage represent in MPU region instead. 3. address space - linked list of fpages bound to particular thread(s).
+Memory management in F9 microkernel, can split into three conceptions: 1. memory pool, which represents the area of PAS with specific attributes (hardcoded in mem map table). 2. flexible page - unlike traditional pages in L4, fpage represent in MPU region instead. 3. address space - linked list of fpages bound to particular thread(s).
 
 \subsubsection{Memory Pool}
-In f9-kernel, memory pool was static and declare before compile; it will declare each memory segment's start, end, permission, etc., then slice the needed part into fpage size, put into address space.
+In F9 microkernel, memory pool was static and declare before compile; it will declare each memory segment's start, end, permission, etc., then slice the needed part into fpage size, put into address space.
 
 \subsubsection{Address Space}
-Address space is the structure that each thread record their fpage. When creating a new thread in f9-kernel, it will first declare fpage chain for it, then mapping needed information into address space.
+Address space is the structure that each thread record their fpage. When creating a new thread in F9 microkernel, it will first declare fpage chain for it, then mapping needed information into address space.
 
-Using \texttt{map{\_}area} function, \texttt{map{\_}area} can find the proper address space from source to destination by giving base position and size, it will search the first and last fpage that contain base position and end of the request size. If the first and last fpage was found, it will split fpage into two fpage, then mapping fpage from source to destination. f9-kernel provide these API for setting up address space: 
+Using \texttt{map{\_}area} function, \texttt{map{\_}area} can find the proper address space from source to destination by giving base position and size, it will search the first and last fpage that contain base position and end of the request size. If the first and last fpage was found, it will split fpage into two fpage, then mapping fpage from source to destination. F9 microkernel provide these API for setting up address space: 
 \begin{itemize}
 \item \verb|as_create|
 \item \verb|as_setup_mpu|
@@ -137,7 +137,7 @@ Using \texttt{map{\_}area} function, \texttt{map{\_}area} can find the proper ad
 
 
 \subsubsection{Flexible pages (fpage)}
-In f9-kernel, every fpage can directly use by MPU as a page (that mean be protected by MPU), and address space was build from fpage. Fpage structure include base address, memory pool id, flags, size and permission. f9-kernel provide fpage API:
+In F9 microkernel, every fpage can directly use by MPU as a page (that mean be protected by MPU), and address space was build from fpage. Fpage structure include base address, memory pool id, flags, size and permission. F9 microkernel provide fpage API:
 \begin{itemize}
 	\item \verb|create_fpage|
 	\item \verb|create_fpage_chain|
@@ -146,13 +146,13 @@ In f9-kernel, every fpage can directly use by MPU as a page (that mean be protec
 
 \subsection{IPC}
 
-f9-kernel implemented very small set of system call from L4, one of the system call is IPC\cite{dannowski2011l4, arm2016svc}. f9-kernel IPC was implemented in synchronous IPC, means that when a thread want to communicate with another thread, it will first set sender into the \verb|SEND_BLOCKED| state, then waiting for target receiver goes into the \verb|RECV_BLOCKED| state. After these two threads are in the proper state, it will thus perform IPC communication. This technique avoids buffering in the kernel (cause no need for maintaining a buffer or queue for recv / send), the management and the copying cost between two thread.\cite{nourai2005aphysically}
+F9 microkernel implemented very small set of system call from L4, one of the system call is IPC\cite{dannowski2011l4, arm2016svc}. F9 microkernel IPC was implemented in synchronous IPC, means that when a thread want to communicate with another thread, it will first set sender into the \verb|SEND_BLOCKED| state, then waiting for target receiver goes into the \verb|RECV_BLOCKED| state. After these two threads are in the proper state, it will thus perform IPC communication. This technique avoids buffering in the kernel (cause no need for maintaining a buffer or queue for recv / send), the management and the copying cost between two thread.\cite{nourai2005aphysically}
 
-f9-kernel introduce two different IPC register - message register and buffer register. The message register is a virtual register that can only be read one time, after one read, the value in this message register will be undefined. First introduced the concept in pistachio\cite{nourai2005aphysically}, Message register can be moderate-size and now f9-kernel implement 4 type of items: Untyped, Typed, Map, Grant item.
+F9 microkernel introduce two different IPC register - message register and buffer register. The message register is a virtual register that can only be read one time, after one read, the value in this message register will be undefined. First introduced the concept in pistachio\cite{nourai2005aphysically}, Message register can be moderate-size and now F9 microkernel implement 4 type of items: Untyped, Typed, Map, Grant item.
 
 \subsection{IPC practial view}
 
-IPC syscall in f9-kernel has send and receive two stage. If target thread wasn't waiting for receive, then caller thread will go into send block state until target thread starts to receiving.
+IPC syscall in F9 microkernel has send and receive two stage. If target thread wasn't waiting for receive, then caller thread will go into send block state until target thread starts to receiving.
 
 And, receiving thread can set into two receive type: 1. closed receive: wait for particular thread. 2. open wait: wait for all thread who prepare to send to it.
 
@@ -230,16 +230,16 @@ ktimer_event_create(64, ipc_deliver, 0);
 
 \subsection{scheduler}
 
-The thread scheduler in f9-kernel have the responsibility to select new thread for context switches, it perfrom as a round-robin scheduler, and tries to select the first runnable normal thread. In f9-kernel, all threads are at the same priority, this causes the problem if user space thread was a busy loop, it will hang on busy loop thread and never transfer to other normal thread.
+The thread scheduler in F9 microkernel have the responsibility to select new thread for context switches, it perfrom as a round-robin scheduler, and tries to select the first runnable normal thread. In F9 microkernel, all threads are at the same priority, this causes the problem if user space thread was a busy loop, it will hang on busy loop thread and never transfer to other normal thread.
 
 \begin{figure}[H]
 	\begin{center}
 		\includegraphics[width=\linewidth]{picture/scheduler.png}
 	\end{center}
-	\caption{f9-kernel scheduler hierarchy}
+	\caption{F9 microkernel scheduler hierarchy}
 \end{figure}
 
-So now we are trying to create a pluggable scheduler framework on f9-kernel.  Fi-asco.OC has similar approach\cite{elphinstone2013l3,fiasco}.
+So now we are trying to create a pluggable scheduler framework on F9 microkernel.  Fi-asco.OC has similar approach\cite{elphinstone2013l3,fiasco}.
 
 \section{Implementation techniques}
 
@@ -247,25 +247,25 @@ So now we are trying to create a pluggable scheduler framework on f9-kernel.  Fi
 robert love, 
 
 \subsection{sorting}
-f9-kernel sort routines is token from BSD\cite{bentley1993engineering}, BSD approach found that swapping is the most sensitive issue in sorting. It have conqure the problem that sorting in differnet width data size. Also f9-kernel implement sort by heapsort to prevent quick sort worst case in $\mathcal{O}(n \times n)$ , make the sorting time is $\mathcal{O}(n\log{}n)$  both on average and worst-case.
+F9 microkernel sort routines is token from BSD\cite{bentley1993engineering}, BSD approach found that swapping is the most sensitive issue in sorting. It have conqure the problem that sorting in differnet width data size. Also F9 microkernel implement sort by heapsort to prevent quick sort worst case in $\mathcal{O}(n \times n)$ , make the sorting time is $\mathcal{O}(n\log{}n)$  both on average and worst-case.
 
 \subsection{memcpy, duff's device}
-f9-kernel memcpy was derive from MUSL libc project\cite{felker}, it using the technique from "Duff's device", also called "loop unrolling" to improve the performance of memcpy. The future work is to rewrite memcpy code in ARM Thumb-2 to improve performance.
+F9 microkernel memcpy was derive from MUSL libc project\cite{felker}, it using the technique from "Duff's device", also called "loop unrolling" to improve the performance of memcpy. The future work is to rewrite memcpy code in ARM Thumb-2 to improve performance.
 
 \subsection{Init hooks}
 
-f9-kernel used an techqunie call "Initialize hooks", this technique can let developer write code in kernel and assign to run the code in specific stage when kernel is initializing.
+F9 microkernel used an techqunie call "Initialize hooks", this technique can let developer write code in kernel and assign to run the code in specific stage when kernel is initializing.
 
-f9-kernel provide an API \verb|INIT_HOOK(hook, level)|, this is a syntactic sugar that will convert into an const \verb|init_struct|, which will then put in section \verb|.init_hook|, in linker script it will define \verb|init_hook| start and end position, it will be an linear address for all init hook define by developer.
+F9 microkernel provide an API \verb|INIT_HOOK(hook, level)|, this is a syntactic sugar that will convert into an const \verb|init_struct|, which will then put in section \verb|.init_hook|, in linker script it will define \verb|init_hook| start and end position, it will be an linear address for all init hook define by developer.
 
 In booting stage, kernel will try to execute these hook by \verb|run_init_hook(level)|, this function will then scan the \verb|init_hook| region from start to end, if it found the proper level to execute, it will then execute the hook. Also, when multiple hooks are in the same level, this approach won't guarantee the order to execute hooks.
 
 \subsection{Ksymbol maps and Kprobe}
-f9-kernel using an elegant method to dump out symbol from kernel and let kernel can using these symbol information such as function address and symbol name in runtime. When building the entire kernel, build system will first compile all component then linked to a non-symbol elf kernel file, then the special make scripts which build for covert elf to symbol map file, will using GNU toolchain "nm" tool to dump all symbols out of the kernel into a pre-define c template. After all, it compile and linked the non-symbol kernel and symbol map which set into the \texttt{.sym\_tab} section.
+F9 microkernel using an elegant method to dump out symbol from kernel and let kernel can using these symbol information such as function address and symbol name in runtime. When building the entire kernel, build system will first compile all component then linked to a non-symbol elf kernel file, then the special make scripts which build for covert elf to symbol map file, will using GNU toolchain "nm" tool to dump all symbols out of the kernel into a pre-define c template. After all, it compile and linked the non-symbol kernel and symbol map which set into the \texttt{.sym\_tab} section.
 
-This mechanism let f9-kernel can easily using symbol maps in runtime, and the demostration about using sybmol map can be found at Kprobe.
+This mechanism let F9 microkernel can easily using symbol maps in runtime, and the demostration about using sybmol map can be found at Kprobe.
 
-f9-kernel have implement an light weight debugging system call "Kprobe", this term is inherit from Linux kernel. The Kprobe goals is to provide an in-kernel dynamic tracing mechanism, allow developers to gather additional infromation about kernel operation without recompiling or rebooting system. Currently, Kprobe is implemented through hardware breakpoint from ARMv7 Debug Architecture. 
+F9 microkernel have implement an light weight debugging system call "Kprobe", this term is inherit from Linux kernel. The Kprobe goals is to provide an in-kernel dynamic tracing mechanism, allow developers to gather additional infromation about kernel operation without recompiling or rebooting system. Currently, Kprobe is implemented through hardware breakpoint from ARMv7 Debug Architecture. 
 
 In ARMv7, we can use DebugMon exception to trap probed address\cite{yiu2013definitive}, when a kprobe is registered, one of the FPB (Flash patch and Breakpoint Unit) will set to the probed address. When a CPU hits the probed address, trap occurs, FPB will generate a DebugMon exception and set bit-BKPT in Debug Fault Status Register (DFSR).
 
@@ -274,8 +274,8 @@ the probed address. And soon a DebugMon exception will be generated againonce an
 
 We can check bit-HALTED from DFSR to know if there is a single-step debug event. If yes, it is time to call all the \texttt{post\_handlers} associated with this address. Then execution resumes and continues normally.
 
-Because of the hardware support, we can using 10 times less code compare to Linux kernel to implement Kprobes. But, at this moment, f9-kernel Kprobe can only used in kernel space, user space was not support yet, cause f9-kernel is using function address to regist in Kprobe, compare to Linux kernel, it is using symbol name to regist 
-probed function. But as metion below, f9-kernel already implement the infrastructure to support symbol name regist probed function in user space, this will be the next develop in f9-kernel.
+Because of the hardware support, we can using 10 times less code compare to Linux kernel to implement Kprobes. But, at this moment, F9 microkernel Kprobe can only used in kernel space, user space was not support yet, cause F9 microkernel is using function address to regist in Kprobe, compare to Linux kernel, it is using symbol name to regist 
+probed function. But as metion below, F9 microkernel already implement the infrastructure to support symbol name regist probed function in user space, this will be the next develop in F9 microkernel.
 
 \begin{lstlisting}[basicstyle=\small,frame=single]
 /* Linux kernel */
@@ -283,7 +283,7 @@ struct kprobe kp = {
     .symbol_name    = "_do_fork",
 };
 
-/* f9-kernel */
+/* F9 microkernel */
 struct kprobe kp = {
     .addr    = ktimer_handler
 };
@@ -291,11 +291,11 @@ struct kprobe kp = {
 \end{lstlisting}
 
 \subsection{Ktimer}
-f9-kernel implement Ktimer for handle timer ticks interrupt, is provide an will interface for kenrel to create ktimer evenet, kernel will set the ticks and event function which it want to execute after how many ticks, when ticks was down to 0, ktimer will trigger an ktimer softirq to execute function handler in ktimer event. 
+F9 microkernel implement Ktimer for handle timer ticks interrupt, is provide an will interface for kenrel to create ktimer evenet, kernel will set the ticks and event function which it want to execute after how many ticks, when ticks was down to 0, ktimer will trigger an ktimer softirq to execute function handler in ktimer event. 
 
 \subsection{Tickless scheduling}
 
-f9-kernel also provide tickless scheduling to prevent higher power consumption in deeply embedded system\cite{freertos1,freertos2}. In Cortex-M4, processor has a 24-bit system timer, SysTick, that count down from the reload value to zero, trigger Timer interrupt, ,then reload the value in the \verb|STK_LOAD| register on the next clock edge\cite{st2016manual}. Assume we config \verb|STK_LOADS| value to 1024, then the SysTick will generate Timer interrupt every 1024 ticks.
+F9 microkernel also provide tickless scheduling to prevent higher power consumption in deeply embedded system\cite{freertos1,freertos2}. In Cortex-M4, processor has a 24-bit system timer, SysTick, that count down from the reload value to zero, trigger Timer interrupt, ,then reload the value in the \verb|STK_LOAD| register on the next clock edge\cite{st2016manual}. Assume we config \verb|STK_LOADS| value to 1024, then the SysTick will generate Timer interrupt every 1024 ticks.
 
 In tickless scheduing mode, kernel will enter tickless right before doing to CPU idle state, set interval of next timer interrupt as delta of next evnet, or \verb|KTIMER_MAXTICKS|. Then adjust system time after waked up.
 
@@ -303,7 +303,7 @@ In tickless scheduing mode, kernel will enter tickless right before doing to CPU
 	\begin{center}
 		\includegraphics[width=\linewidth]{picture/tickless.png}
 	\end{center}
-	\caption{Tickless scheduling in f9-kernel}
+	\caption{Tickless scheduling in F9 microkernel}
 \end{figure}
 
 
@@ -319,7 +319,7 @@ ARM Cortex-M provide an atomic access method call "Bit-banding", Bit-banding mec
 
 This techquine makes atomic access more friendly to developer since devloper won't using any assembly language and no need to take care about contex-switch or preemption problem.
 
-f9-kernel using bit-band technique to create an fast atomic object management mechanism "Ktable", Ktable can create an structure that provide table size, number of chunk, and data. f9-kernel using Ktable to manage fpages table, address space table, and thread table.
+F9 microkernel using bit-band technique to create an fast atomic object management mechanism "Ktable", Ktable can create an structure that provide table size, number of chunk, and data. F9 microkernel using Ktable to manage fpages table, address space table, and thread table.
 
 \begin{itemize}
 \footnotesize
@@ -340,9 +340,9 @@ f9-kernel using bit-band technique to create an fast atomic object management me
 \end{figure}
 
 \subsection{pthread mutex}
-ARM Cortex-M provide an local exclusive monitor for exclusive accesses. This gave Cortex-M CPU have the atomic load / store ability for developers\cite{arm2012v7}. f9-kernel implement an POSIX compactiable library for user space, using atomic load / store technique, we are able to implement an user space mutex lock implement in pthread library.
+ARM Cortex-M provide an local exclusive monitor for exclusive accesses. This gave Cortex-M CPU have the atomic load / store ability for developers\cite{arm2012v7}. F9 microkernel implement an POSIX compactiable library for user space, using atomic load / store technique, we are able to implement an user space mutex lock implement in pthread library.
 
-Using thumb2 instruction, our approach in f9-kernel only need 24 bytes to implement the \texttt{pthread\_mutex\_trylock} function in pthread library.
+Using thumb2 instruction, our approach in F9 microkernel only need 24 bytes to implement the \texttt{pthread\_mutex\_trylock} function in pthread library.
 
 \begin{lstlisting}[basicstyle=\small,frame=single]
 44:	4603      	mov	r3, r0
@@ -358,9 +358,9 @@ Using thumb2 instruction, our approach in f9-kernel only need 24 bytes to implem
 \end{lstlisting}
 
 \section{Conclusion}
-f9-kernel is the first microkernel that using MPU and create security memory management microkernel, rely on the fpage and address space infrastructure, f9-kernel can only waste a little memory space but provide thread to thread memory access control. Also f9-kernel have a fast IPC performance and tickless schedule for energy-saving, and provide f9-kernel a well in-kernel debugging toolchains like kdb and Kprobe.
+F9 microkernel is the first microkernel that using MPU and create security memory management microkernel, rely on the fpage and address space infrastructure, F9 microkernel can only waste a little memory space but provide thread to thread memory access control. Also F9 microkernel have a fast IPC performance and tickless schedule for energy-saving, and provide F9 microkernel a well in-kernel debugging toolchains like kdb and Kprobe.
 
-The future work of f9-kernel can split into two catagories. One is to develop kernel itself, and another is to improve kernel dynamic tracing toolchains.
+The future work of F9 microkernel can split into two catagories. One is to develop kernel itself, and another is to improve kernel dynamic tracing toolchains.
 
 \bibliography{f9-report.bib}
 
