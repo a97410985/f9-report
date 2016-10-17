@@ -180,7 +180,7 @@ Kernel can used \verb|map_area| function to manipluate address spaces, \verb|gra
 \verb|as_setup_mpu| is used when perform context switch between two thread.
 
 
-\subsubsection{Flexible pages (fpage)}
+\subsubsection{Flexible Pages (fpage)}
 In F9 microkernel, every fpage can directly use by MPU as a page (that mean be protected by MPU), and address space was build from fpage. Fpage structure include base address, memory pool id, flags, size and permission. F9 microkernel provide fpage API:
 \begin{itemize}
 	\item \verb|create_fpage|
@@ -190,9 +190,9 @@ In F9 microkernel, every fpage can directly use by MPU as a page (that mean be p
 
 \subsection{IPC}
 
-L4 provides a single system call for all IPC, F9 microkernel follow the implementation from L4\cite{dannowski2011l4}. the IPC was implemented in synchronous IPC, means that when a thread want to communicate with another thread, it will first set sender into the \verb|SEND_BLOCKED| state, then waiting for target receiver goes into the \verb|RECV_BLOCKED| state. After these two threads are in the proper state, it will thus perform IPC communication. Synchronous IPC avoids buffering in the kernel, the management and the copying cost between two thread.\cite{nourai2005aphysically}
+L4 provides a single system call for all IPC functions, F9 microkernel follow the implementation from L4\cite{dannowski2011l4}. The IPC was implemented in synchronous IPC, means that when a thread want to communicate with another thread, it will first set sender into the \verb|SEND_BLOCKED| state, then waiting for target receiver goes into the \verb|RECV_BLOCKED| state. After these two threads are in the proper state, it will thus perform IPC communication. Synchronous IPC avoids buffering in the kernel, the management and the copying cost between two thread.\cite{nourai2005aphysically}
 
-IPC are not only provide threads communication, but also deliver user interrupt and 
+IPC are not only provide threads communication, but also handle the protocal for user thread create, user interrupt config and handle, and user space standard output. The method that IPC can distinguish different function is to checking \verb|from_tid| and \verb|to_tid|, as mentioned earlier, there were two special thread tid in L4 kernel  called \verb|NilThread| and \verb|AnyThread|, F9 microkernel also provide other special thread tid to perform different functions.
 
 F9 microkernel introduce two different IPC register - message register and buffer register. The message register is a virtual register that can only be read one time, after one read, the value in this message register will be undefined. First introduced the concept in pistachio\cite{nourai2005aphysically}, Message register can be moderate-size and now F9 microkernel implement 4 type of items: Untyped, Typed, Map, Grant item.
 
@@ -201,7 +201,6 @@ F9 microkernel introduce two different IPC register - message register and buffe
 Threads is the basic execution unit in F9 microkernel, each thread in F9 microkernel, has its own Thread Control Block (TCB) and addressed by its global id. In F9 microkernel, global id only used the upper 18-bits and lower bits are reserved.
 
 In F9 microkernel, there is a thread map which store the TCBs, and sorted by \textit{global id} in ascending order. When the thread was created, it will insert into the thread map by its global id, the benefit of ensure the thread map is be in ascending order is that F9 microkernel can get the thread by global id using binary search, provide the API \verb|thread_by_globalid| for other kernel component.
-
 
 \subsection{Scheduler}
 
@@ -332,7 +331,7 @@ Using thumb2 instruction, our approach in F9 microkernel only need 24 bytes to i
 \end{lstlisting}
 
 \section{Conclusion}
-F9 microkernel is the first microkernel that using MPU and create security memory management microkernel, rely on the fpage and address space infrastructure, F9 microkernel can only waste a little memory space but provide thread to thread memory access control. Also F9 microkernel have a fast IPC performance and tickless schedule for energy-saving, and provide F9 microkernel a well in-kernel debugging toolchains like kdb and Kprobe.
+F9 microkernel is the first microkernel that using MPU and create security memory management microkernel, rely on the fpage and address space infrastructure, F9 microkernel only waste a little memory space but provide thread to thread memory access control. Also F9 microkernel have a fast IPC performance and tickless schedule for energy-saving, and provide F9 microkernel a well in-kernel debugging toolchains like kdb and Kprobe.
 
 The future work of F9 microkernel can split into two catagories. One is to develop kernel itself, and another is to improve kernel dynamic tracing toolchains.
 
