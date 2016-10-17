@@ -77,8 +77,9 @@ The ARM Cortex-M CPU series is the most widely used CPU in low-power consumption
 
 \section{Background of microkernel}
 
-\subsection{History of L4 kernel family}
+\subsection{History of microkernel}
 
+The first generation of microkernel "Mach",
 
 \subsection{Inter-Process Communication}
 
@@ -151,87 +152,9 @@ F9 microkernel implemented very small set of system call from L4, one of the sys
 
 F9 microkernel introduce two different IPC register - message register and buffer register. The message register is a virtual register that can only be read one time, after one read, the value in this message register will be undefined. First introduced the concept in pistachio\cite{nourai2005aphysically}, Message register can be moderate-size and now F9 microkernel implement 4 type of items: Untyped, Typed, Map, Grant item.
 
-\subsection{IPC practial view}
-
-IPC syscall in F9 microkernel has send and receive two stage. If target thread wasn't waiting for receive, then caller thread will go into send block state until target thread starts to receiving.
-
-And, receiving thread can set into two receive type: 1. closed receive: wait for particular thread. 2. open wait: wait for all thread who prepare to send to it.
-
-We can study IPC from the classic program in l4 / 49 calls "Ping Pong," this program setting up two thread call "Ping" and "Pong," Ping will try to send a message to Pong by using IPC. Below is the pseudo code for ping and pong.
-
-\begin{lstlisting}[language=c,frame=single,basicstyle=\small]
-/* Ping */
-L4_Msg_t msg;
-L4_MsgTag_t tag;
-
-L4_MsgClear(&msg);
-L4_MsgLoad(&msg);
-
-loop {
-    tag = L4_Send(threads[PONG_THREAD]);
-}
-
-/* Pong */
-L4_MsgTag_t tag;
-L4_Msg_t msg;
-
-loop {
-    tag = L4_Receive(threads[PING_THREAD]);
-    L4_MsgStore(tag, &msg);
-}
-\end{lstlisting}
-
-We can see that Pong is using close receive to specify receive message from Ping thread, then Ping thread will send the message to Ping thread by calling \texttt{L4\_Send} function.
-
-If we trace down the code, we can see that \texttt{L4\_Send} and \texttt{L4\_Recive} is only a convenience programming interface for \texttt{L4\_IPC} [7].
-
-\begin{lstlisting}[language=c,basicstyle=\small,frame=single]
-/* include/l4/ipc.h */
-L4_MsgTag_t L4_Send(L4_ThreadId_t to)
-{
-    return L4_Ipc (to,
-                   L4_nilthread,
-                   L4_Never, 0);
-}
-
-/* user/lib/l4/platform/syscalls.c */
-L4_MsgTag_t L4_Ipc(L4_ThreadId_t to,
-           L4_ThreadId_t FromSpecifier,
-           L4_Word_t Timeouts,
-           L4_ThreadId_t *from)
-{
-    L4_MsgTag_t result;
-    L4_ThreadId_t from_ret;
-
-    __asm__ __volatile__(
-        "svc %[syscall_num]\n"
-        "str r0, %[from]\n"
-        : [from] "=m"(from_ret)
-        : [syscall_num] "i"(SYS_IPC));
-
-        result.raw = __L4_MR0;
-
-    if (from != NULL)
-        *from = from_ret;
-
-    return result;
-}
-\end{lstlisting}
-
-The reason that we separate \texttt{L4\_IPC} and \texttt{L4\_Send} is because system call part is platform specific land, for the cross-platform issue, we put this code in a separate file. We can see \texttt{L4\_IPC} calling svc with \texttt{syscall\_num}; svc is the supervisor call in Cortex-M, witch request privileged operations or access to system resources from an operating system[8]. For calling convention, R0-R2 were saving to, FromSpecifier, and Timeouts, so from the receiver Pong \texttt{L4\_Receive}, it will take R0 as \texttt{L4\_nilthread}, R1 as Ping Thread and R2 as \texttt{L4\_Never}.
-		
-Then seek into the kernel, we can found that this is an \texttt{SYS\_IPC} call in kernel/ipc.c; then it will perform the proper IPC process. Because to thr is \texttt{L4\_nilthread}, so that we can know this \texttt{SYS\_IPC} call is a receive calling, and FromSpecifier wasn't ANYTHREAD, so this is a close receive specify for Ping Thread.
-	
-But if receiver and sender were not synchronous? They will only lock themselves and wait for \texttt{ipc\_deliver} to perform IPC communicate. \texttt{ipc\_deliver} is a function that ticks from kernel timer every 64 ticks to do with two IPC communicate.
-
-\begin{lstlisting}[basicstyle=\small,frame=single]
-/* psudocode for ipc_deliver event */
-ktimer_event_create(64, ipc_deliver, 0);
-\end{lstlisting}
-
 \subsection{scheduler}
 
-The thread scheduler in F9 microkernel have the responsibility to select new thread for context switches, it perfrom as a round-robin scheduler, and tries to select the first runnable normal thread. In F9 microkernel, all threads are at the same priority, this causes the problem if user space thread was a busy loop, it will hang on busy loop thread and never transfer to other normal thread.
+The thread scheduler in F9 microkernel have the responsibility to select new thread for context switches, it perfrom as a round-robin scheduler, and tries to select the first runnable normal thread. In L4 kernel, F9 microkernel, all threads are at the same priority, this causes the problem if user space thread was a busy loop, it will hang on busy loop thread and never transfer to other normal thread.
 
 \begin{figure}[H]
 	\begin{center}
@@ -339,8 +262,8 @@ F9 microkernel using bit-band technique to create an fast atomic object manageme
 	\caption{Manipulation in Ktable\cite{ncku2015}}
 \end{figure}
 
-\subsection{pthread mutex}
-ARM Cortex-M provide an local exclusive monitor for exclusive accesses. This gave Cortex-M CPU have the atomic load / store ability for developers\cite{arm2012v7}. F9 microkernel implement an POSIX compactiable library for user space, using atomic load / store technique, we are able to implement an user space mutex lock implement in pthread library.
+\subsection{Mutual exclusion lock}
+ARM Cortex-M provide an local exclusive monitor for exclusive accesses. This gave Cortex-M CPU the atomic load / store ability for developers\cite{arm2012v7}. F9 microkernel implement an POSIX compactiable library for user space, using atomic load / store technique, we are able to implement an user space mutex lock implement via POSIX pthread interface.
 
 Using thumb2 instruction, our approach in F9 microkernel only need 24 bytes to implement the \texttt{pthread\_mutex\_trylock} function in pthread library.
 
