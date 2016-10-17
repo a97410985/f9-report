@@ -217,7 +217,7 @@ In tickless scheduing mode, kernel will enter tickless right before doing to CPU
 robert love,
 
 \subsection{sorting}
-F9 microkernel sort routines is token from BSD\cite{bentley1993engineering}, BSD approach found that swapping is the most sensitive issue in sorting. It have conqure the problem that sorting in differnet width data size. Also F9 microkernel implement sort by heapsort to prevent quick sort worst case in $\mathcal{O}(n \times n)$ , make the sorting time is $\mathcal{O}(n\log{}n)$  both on average and worst-case.
+F9 microkernel sort routine was taken from BSD\cite{bentley1993engineering} developed in University of California, Berkeley, BSD approach found that swapping is the most sensitive issue in sorting. It have conqure the problem that sorting in differnet width data size. Also F9 microkernel implement sort by heapsort to prevent quick sort worst case in $\mathcal{O}(n \times n)$ , make the sorting time is $\mathcal{O}(n\log{}n)$  both on average and worst-case.
 
 \subsection{memcpy, duff's device}
 F9 microkernel memcpy was derive from MUSL libc project\cite{felker}, it using the technique from "Duff's device", also called "loop unrolling" to improve the performance of memcpy. The future work is to rewrite memcpy code in ARM Thumb-2 to improve performance.
