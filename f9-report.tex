@@ -23,6 +23,7 @@
 \usepackage{float}
 \usepackage{natbib}
 
+
 \bibliographystyle{IEEEtran}
 \setcitestyle{numbers,square,comma, sort&compress}
 
@@ -45,6 +46,9 @@
 
 \title{F9: A secure microkernel for MMUless embedded systems}
 \maketitle
+
+\tableofcontents
+
 
 \begin{abstract}\textsl{}
 	
@@ -85,7 +89,7 @@ The second generation of microkernel "L3 \& L4 family", start from Liedtke\cite{
 
 \subsection{Inter-Process Communication}
 
-Inter-Process Communication (IPC) is the mechanism that microkernel thread communicate with other threads\cite{liedtke1993improving}. IPC is an critical issue in microkernel since user code obtains a system service via IPC, typically message passing. IPC may design in synchronous or asynchronous, but in the principle of minimality, a kernel will only choose one approach. L4 kernel provides message-baced, synchronous IPC between threads for performance reason since liedtke reserach in 1993\cite{liedtke1993improving}, only OKL4 used the asynchronous IPC approach\cite{elphinstone2013l3}.
+Inter-Process Communication (IPC) is the mechanism that microkernel thread communicate with other threads\cite{liedtke1993improving}. IPC is an critical issue in microkernel since operating system services such as file systems, device drivers, network protocol stacks, etc, are not inlucde in the kernel but running in the user space, so, all the communication between system services and user applications involves IPC to and from servies\cite{iqbal2010overview}, typically message passing. IPC may design in synchronous or asynchronous, but in the principle of minimality, a kernel will only choose one approach. L4 kernel provides message-based, synchronous IPC between threads for performance reason since liedtke reserach in 1993\cite{liedtke1993improving}, only OKL4 used the asynchronous IPC approach\cite{elphinstone2013l3}.
 
 \subsection{Memory Mnagement and Address spacecs }
 
@@ -121,7 +125,7 @@ Unlike other L4 kernels, F9 microkernel focus on MPU-only platform such as ARM c
 
 MPU is a hardware unit that can set access control permissions for a memory region. There are 8 MPU in Cortex-M CPU, each of the MPU can set individual access permission for a memory region. There is a limitation of setting memory region in MPU is that developer can only set "$2^n$" size memory region from 32 bytes to 4 Gbytes\cite{yiu2013definitive,st2016managing}. For example, setting 64 bytes memory region is valid, but setting 96 bytes memory region is invalid. Obey to this limitation, F9 microkernel developed an elegant mechanism to breakthrough this limited for memory management, called fpage.
 
-Memory management in F9 microkernel, can split into three conceptions: 1. memory pool, which represents the area of PAS with specific attributes (hardcoded in mem map table). 2. flexible page - unlike traditional pages in L4, fpage represent in MPU region instead. 3. address space - linked list of fpages bound to particular thread(s).
+Memory management in F9 microkernel, can split into three conceptions: 1. memory pool, which represents the area of PAS with specific attributes (hardcoded in mem map table). 2. address space - sorted list of fpages bound to particular thread(s). 3. flexible page - unlike traditional pages in L4, fpage represent in MPU region instead. 
 
 \subsubsection{Memory Pool}
 In F9 microkernel, memory pool was static and declare before compile; it will declare each memory segment's start, end, permission, etc., then slice the needed part into fpage size, put into address space.
@@ -186,7 +190,7 @@ In F9 microkernel, every fpage can directly use by MPU as a page (that mean be p
 
 \subsection{IPC}
 
-L4 provides a single system call for all IPC, F9 microkernel follow the implementation from L4\cite{dannowski2011l4}, the IPC was implemented in synchronous IPC, means that when a thread want to communicate with another thread, it will first set sender into the \verb|SEND_BLOCKED| state, then waiting for target receiver goes into the \verb|RECV_BLOCKED| state. After these two threads are in the proper state, it will thus perform IPC communication. This technique avoids buffering in the kernel (cause no need for maintaining a buffer or queue for recv / send), the management and the copying cost between two thread.\cite{nourai2005aphysically}
+L4 provides a single system call for all IPC, F9 microkernel follow the implementation from L4\cite{dannowski2011l4}. the IPC was implemented in synchronous IPC, means that when a thread want to communicate with another thread, it will first set sender into the \verb|SEND_BLOCKED| state, then waiting for target receiver goes into the \verb|RECV_BLOCKED| state. After these two threads are in the proper state, it will thus perform IPC communication. Synchronous IPC avoids buffering in the kernel, the management and the copying cost between two thread.\cite{nourai2005aphysically}
 
 Also, the user defined interrupt in was passing through IPC in 
 
@@ -194,9 +198,12 @@ F9 microkernel introduce two different IPC register - message register and buffe
 
 \subsection{Threads}
 
+Threads is the basic execution unit in F9 microkernel, each thread in F9 microkernel, has its own Thread Control Block (TCB) and addressed by its global id. In F9 microkernel, global id only used the upper 18-bits and lower bits are reserved, 
+
+In F9 microkernel, there is a thread map which store the TCB, and sorted by \textit{global id} in ascending order. When the thread was created, it will insert into the thread map by its global id, the benefit of ensure the thread map is be in ascending order is that F9 microkernel can get the thread by global id using binary search, provide the API \verb|thread_by_globalid| for other kernel component.
 
 
-\subsection{scheduler}
+\subsection{Scheduler}
 
 The thread scheduler in F9 microkernel have the responsibility to select new thread for context switches, it perfrom as a round-robin scheduler, and tries to select the first runnable normal thread. In L4 kernel, F9 microkernel, all threads are at the same priority, this causes the problem if user space thread was a busy loop, it will hang on busy loop thread and never transfer to other normal thread.
 
@@ -229,12 +236,12 @@ probed function. But as metion below, F9 microkernel already implement the infra
 \begin{lstlisting}[basicstyle=\small,frame=single]
 /* Linux kernel */
 struct kprobe kp = {
-.symbol_name    = "_do_fork",
+	.symbol_name    = "_do_fork",
 };
 
 /* F9 microkernel */
 struct kprobe kp = {
-.addr    = ktimer_handler
+	.addr    = ktimer_handler
 };
 
 \end{lstlisting}
@@ -256,6 +263,7 @@ In tickless scheduing mode, kernel will enter tickless right before doing to CPU
 \end{figure}
 
 \section{Implementation techniques}
+
 
 實際上有很多限制，in deterministic, microscope 最佳化, 又要系統很好維護
 robert love,
