@@ -47,7 +47,7 @@
 \title{F9: A secure microkernel for MMUless embedded systems}
 \maketitle
 
-\tableofcontents
+% \tableofcontents
 
 
 \begin{abstract}\textsl{}
@@ -62,7 +62,7 @@ In this paper, we describe the design and implementation of F9 microkernel - a m
 
 \section{Introduction}
 
-An OS for IoT devices should at lease fulfill the reliability\cite{baccelli2013riot}. Research in operating systems shows that monolithic kernel such as Linux kernel\cite{chou2001empirical} and Microsoft Windows NT\cite{swift2005improving} are making errors from drivers, and Heiser state that larger trusted computing base (TCB) cannot be made trustworthy, the key to a trustworthy TCB is a very small kernel\cite{heiser2005secure}, thus we are aim to use microkernel to fulfill reliability.
+An OS for IoT devices should at lease fulfill the reliability\cite{baccelli2013riot}. Research in operating systems shows that monolithic kernel such as Linux kernel\cite{chou2001empirical} and Microsoft Windows NT\cite{swift2005improving} are making errors from drivers, and Heiser state that larger trusted computing base (TCB) cannot be made trustworthy, the key to a trustworthy TCB is a very small kernel\cite{heiser2005secure}. Thus we aim to use microkernel to fulfill reliability.
 
 In microkernel, kernel only provides three mechanisms: IPC, Memory Management and thread management, and these mechanisms can be used to build up the services, for example file systems or device drivers, which can provide complete functions for unprivileged applications\ref{fig:kernel_diff}.
 
@@ -192,20 +192,20 @@ In F9 microkernel, every fpage can directly use by MPU as a page (that mean be p
 
 L4 provides a single system call for all IPC, F9 microkernel follow the implementation from L4\cite{dannowski2011l4}. the IPC was implemented in synchronous IPC, means that when a thread want to communicate with another thread, it will first set sender into the \verb|SEND_BLOCKED| state, then waiting for target receiver goes into the \verb|RECV_BLOCKED| state. After these two threads are in the proper state, it will thus perform IPC communication. Synchronous IPC avoids buffering in the kernel, the management and the copying cost between two thread.\cite{nourai2005aphysically}
 
-Also, the user defined interrupt in was passing through IPC in 
+IPC are not only provide threads communication, but also deliver user interrupt and 
 
 F9 microkernel introduce two different IPC register - message register and buffer register. The message register is a virtual register that can only be read one time, after one read, the value in this message register will be undefined. First introduced the concept in pistachio\cite{nourai2005aphysically}, Message register can be moderate-size and now F9 microkernel implement 4 type of items: Untyped, Typed, Map, Grant item.
 
 \subsection{Threads}
 
-Threads is the basic execution unit in F9 microkernel, each thread in F9 microkernel, has its own Thread Control Block (TCB) and addressed by its global id. In F9 microkernel, global id only used the upper 18-bits and lower bits are reserved, 
+Threads is the basic execution unit in F9 microkernel, each thread in F9 microkernel, has its own Thread Control Block (TCB) and addressed by its global id. In F9 microkernel, global id only used the upper 18-bits and lower bits are reserved.
 
-In F9 microkernel, there is a thread map which store the TCB, and sorted by \textit{global id} in ascending order. When the thread was created, it will insert into the thread map by its global id, the benefit of ensure the thread map is be in ascending order is that F9 microkernel can get the thread by global id using binary search, provide the API \verb|thread_by_globalid| for other kernel component.
+In F9 microkernel, there is a thread map which store the TCBs, and sorted by \textit{global id} in ascending order. When the thread was created, it will insert into the thread map by its global id, the benefit of ensure the thread map is be in ascending order is that F9 microkernel can get the thread by global id using binary search, provide the API \verb|thread_by_globalid| for other kernel component.
 
 
 \subsection{Scheduler}
 
-The thread scheduler in F9 microkernel have the responsibility to select new thread for context switches, it perfrom as a round-robin scheduler, and tries to select the first runnable normal thread. In L4 kernel, F9 microkernel, all threads are at the same priority, this causes the problem if user space thread was a busy loop, it will hang on busy loop thread and never transfer to other normal thread.
+The thread scheduler have the responsibility to select new thread for context switches when current thread was blocked or exit. In F9 microkernel, scheduler perfrom as a round-robin scheduler with non-priority, and tries to select the first runnable normal thread, for minimality, F9 microkernel didn't implement runnable timeslice for threads. This approach has a drawback that if user space thread was in a busy loop, it will hang on busy loop thread and never transfer to other normal thread.
 
 \begin{figure}[H]
 	\begin{center}
@@ -214,7 +214,8 @@ The thread scheduler in F9 microkernel have the responsibility to select new thr
 	\caption{F9 microkernel scheduler hierarchy}
 \end{figure}
 
-So now we are trying to create a pluggable scheduler framework on F9 microkernel.  Fi-asco.OC has similar approach\cite{elphinstone2013l3,fiasco}.
+The future work on F9 microkernel thread and scheduler will need to implement thread timeslice for prevent thread scheduling starvation, and to search the real-time scheduling algorithm. 
+
 
 \subsection{Ksymbol maps and Kprobe}
 F9 microkernel using an elegant method to dump out symbol from kernel and let kernel can using these symbol information such as function address and symbol name in runtime. When building the entire kernel, build system will first compile all component then linked to a non-symbol elf kernel file, then the special make scripts which build for covert elf to symbol map file, will using GNU toolchain "nm" tool to dump all symbols out of the kernel into a pre-define c template. After all, it compile and linked the non-symbol kernel and symbol map which set into the \texttt{.sym\_tab} section.
@@ -264,9 +265,7 @@ In tickless scheduing mode, kernel will enter tickless right before doing to CPU
 
 \section{Implementation techniques}
 
-
-實際上有很多限制，in deterministic, microscope 最佳化, 又要系統很好維護
-robert love,
+While implementing microkernel for IoT devices, we will encounter hardware constraint such as limited RAM space, slower CPU clock rate, etc, we will need to used some techniques for microscope optimization.
 
 \subsection{sorting}
 F9 microkernel sort routine was taken from BSD\cite{bentley1993engineering} developed in University of California, Berkeley, BSD approach found that swapping is the most sensitive issue in sorting. It have conqure the problem that sorting in differnet width data size. Also F9 microkernel implement sort by heapsort to prevent quick sort worst case in $\mathcal{O}(n \times n)$ , make the sorting time is $\mathcal{O}(n\log{}n)$  both on average and worst-case.
@@ -278,7 +277,7 @@ F9 microkernel memcpy was derive from MUSL libc project\cite{felker}, it using t
 
 F9 microkernel used an techqunie call "Initialize hooks", this technique can let developer write code in kernel and assign to run the code in specific stage when kernel is initializing.
 
-F9 microkernel provide an API \verb|INIT_HOOK(hook, level)|, this is a syntactic sugar that will convert into an const \verb|init_struct|, which will then put in section \verb|.init_hook|, in linker script it will define \verb|init_hook| start and end position, it will be an linear address for all init hook define by developer.
+API \verb|INIT_HOOK(hook, level)| is the syntactic sugar that will convert into an const \verb|init_struct|, which will then put in section \verb|.init_hook|, in linker script it will define \verb|init_hook| start and end position, it will be an linear address for all init hook define by developer.
 
 In booting stage, kernel will try to execute these hook by \verb|run_init_hook(level)|, this function will then scan the \verb|init_hook| region from start to end, if it found the proper level to execute, it will then execute the hook. Also, when multiple hooks are in the same level, this approach won't guarantee the order to execute hooks.
 
