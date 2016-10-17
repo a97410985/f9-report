@@ -64,7 +64,7 @@ In microkernel, kernel only provides three mechanisms: IPC, Memory Management an
 
 The history of microkernel can be date back to 1969s, and have developed in 3 generations: (i) Mach, (ii) L3 \& L4, improving IPC performance, written in assembly (iii) seL4, Fiasco.OC, NOVA, platform independence and formal verification, security, SMP, etc. These microkernels needs to run on the platform which have Memory Management Unit, but in low-power consumption IoT device, it is often that the CPU doesn't provide MMU.
 
-The ARM Cortex-M CPU series is the most widely used CPU in low-power consumption IoT devices, as for 2016, it has shipped more than 11 billion Cortex-M CPU in the market. These processors has high performance and low-power consumption, but were lack of conventional Memory Management Unit, which limits their ability to run traditional operating systems with (paged) memory protection. Instead, F9 microkernel is designed to use the Cortex-M Memory Protection Unit to provide memory isolation.
+The ARM Cortex-M CPU series is the most widely used CPU in low-power consumption IoT devices, as for 2016, it has shipped more than 11 billion Cortex-M CPU in the market. These processors has high performance and low-power consumption, but were lack of conventional Memory Management Unit, which limits their ability to run traditional operating systems with (paged) memory protection. Instead, F9 microkernel is designed to use the Cortex-M Memory Protection Unit to provide memory isolation. 
 
 \begin{figure}[H]
 	\begin{center}
@@ -77,13 +77,21 @@ The ARM Cortex-M CPU series is the most widely used CPU in low-power consumption
 
 \section{Background of microkernel}
 
-\subsection{History of microkernel}
+\subsection{Brief history of microkernel}
 
-The first generation of microkernel "Mach",
+The first generation of microkernel "Mach", demonstrate that the idea of Inter-process communication (IPC) was successful to increase kernel modularity, security and scalability, it replace pipes with IPC, and split other services out from kernel to improved stability of microkernel, although IPC performance is vital for microkernel, however, limited to the implementation of Mach, the performance of IPC was poor in modern processor\cite{liedtke1993improving}.
+
+The second generation of microkernel "L3 \& L4 family", start from Liedtke\cite{liedtke1993improving}, L3 kernel tries to improve IPC performance by re-design microkernel from architecture to coding level, the result of L3 kernel improve IPC performance nearly twentyfold, Liedtke then introduce the "L4" with "V2" ABI in the microkernel community from 1995\cite{liedtke1995u}. This work triggered a twenty-year evolution, "L4" then evolved into a family, including the first ported L4 kernel \textit{Hazelnut} in 2000 (from Pentium to ARM), \textit{L4Ka::Pistachio} that focus on portability, Pistachio has ported in to MIPS, Alpha, 64-bit PowerPC and ARM, and \textit{Fiasco} that aim for formal verification. 
 
 \subsection{Inter-Process Communication}
 
 Inter-Process Communication (IPC) is the mechanism that microkernel thread communicate with other threads\cite{liedtke1993improving}. IPC is an critical issue in microkernel since user code obtains a system service via IPC, typically message passing. IPC may design in synchronous or asynchronous, but in the principle of minimality, a kernel will only choose one approach. L4 kernel provides message-baced, synchronous IPC between threads for performance reason since liedtke reserach in 1993\cite{liedtke1993improving}, only OKL4 used the asynchronous IPC approach\cite{elphinstone2013l3}.
+
+\subsection{Memory Mnagement and Address spacecs }
+
+In modern system architectures and operating system, physical memory usually will be 'virtualize' into virtual memory for programs to execute in\cite{arpaci2015operating}. A hardware device called memory-management unit (MMU) will translate between physical memory address to virtual memory and so on are lies between CPU and memory.
+
+L4 provides the mechanism for implementing recursively-defined virtual address that are managed in user level\cite{dannowski2011l4}. Initial address space is controlled by first process, other process who derive from the first process, will obtain memory pages from first.
 
 \subsection{Thread Managemnet}
 
@@ -94,12 +102,6 @@ Threads is the basic execution unit in L4. They are created, destroyed via the \
 Every threads in L4 have \textit{global} and \textit{local} thread identifier (thread id). Global thread id is unique throughout the entire system, local thread id have the scope limited in its own address space.
 
 The global thread identifier in L4 contains two distinct parts - a upper 18-bits thread number and lower 14-bits version number. Also there are two special thread ids reserved L4 API - NilThread and AnyThread. NilThread identifier is implemented as 0, and AnyThread is impledmented as all bits set to 1. These special thread identifier will be used in L4 IPC system call\cite{nourai2005aphysically}.
-
-\subsection{Memory Mnagement and Address spacecs }
-
-In modern system architectures and operating system, physical memory usually will be 'virtualize' into virtual memory for programs to execute in\cite{arpaci2015operating}. A hardware device called memory-management unit (MMU) will translate between physical memory address to virtual memory and so on are lies between CPU and memory.
-
-L4 provides the mechanism for implementing recursively-defined virtual address that are managed in user level\cite{dannowski2011l4}. Initial address space is controlled by first process, other process who derive from the first process, will obtain memory pages from first.
 
 \section{Design of F9 microkernel}
 
@@ -127,7 +129,43 @@ In F9 microkernel, memory pool was static and declare before compile; it will de
 \subsubsection{Address Space}
 Address space is the structure that each thread record their fpage. When creating a new thread in F9 microkernel, it will first declare fpage chain for it, then mapping needed information into address space.
 
-Using \texttt{map{\_}area} function, \texttt{map{\_}area} can find the proper address space from source to destination by giving base position and size, it will search the first and last fpage that contain base position and end of the request size. If the first and last fpage was found, it will split fpage into two fpage, then mapping fpage from source to destination. F9 microkernel provide these API for setting up address space: 
+In F9 microkernel, address space is using the recursive address space model from L4, and allows to construct and manipulate address spaces with the following three operations: \verb|grant|, \verb|map|, and \verb|unmap|\cite{volp2002design}.
+
+Kernel can used \verb|map_area| function to manipluate address spaces, \verb|grant| operation means a fpage p is mapped from address space $\sigma{a}$ to $\sigma{b}$, afterwards, p is only accessible in $\sigma{b}$ address space\ref{fig:grant}.
+
+\begin{figure}[H]
+	\begin{center}
+		\includegraphics[height=1.5in]{picture/grant.png}
+	\end{center}
+	\caption{granting fpage p from $\sigma{a}$ to $\sigma{b}$.}
+	\label{fig:grant}
+\end{figure}
+
+
+\verb|map| operation meas a fpage p is mapped from address space, afterwards, p is accessible in both address spaces in $\sigma{a}$ and $\sigma{b}$, \ref{fig:map}.
+
+\begin{figure}[H]
+	\begin{center}
+		\includegraphics[height=1.5in]{picture/map.png}
+	\end{center}
+	\caption{mapping fpage p from $\sigma{a}$ to $\sigma{b}$.}
+	\label{fig:map}
+\end{figure}
+
+
+\verb|unmap| operation will unmapped from all address space directly or indirectly recieved it from $\sigma{a}$, afterwards, p is no longer accessible in $\sigma{b}$, $\sigma{c}$ and $\sigma{d}$\ref{fig:unmap}.
+
+\begin{figure}[H]
+	\begin{center}
+		\includegraphics[height=1.5in]{picture/unmap.png}
+	\end{center}
+	\caption{unmapping fpage p in $\sigma{a}$, $\sigma{b}$, $\sigma{c}$ and $\sigma{d}$ were no longer accessible to fpage p.}
+	\label{fig:unmap}
+\end{figure}
+
+
+
+\verb|map_area| can find the proper address space from source to destination by giving base position and size, it will search the first and last fpage that contain base position and end of the request size. If the first and last fpage was found, it will split fpage into two fpage, then mapping fpage from source to destination. Also F9 microkernel provide these API for low-level address space settings: 
 \begin{itemize}
 \item \verb|as_create|
 \item \verb|as_setup_mpu|
@@ -148,9 +186,15 @@ In F9 microkernel, every fpage can directly use by MPU as a page (that mean be p
 
 \subsection{IPC}
 
-F9 microkernel implemented very small set of system call from L4, one of the system call is IPC\cite{dannowski2011l4, arm2016svc}. F9 microkernel IPC was implemented in synchronous IPC, means that when a thread want to communicate with another thread, it will first set sender into the \verb|SEND_BLOCKED| state, then waiting for target receiver goes into the \verb|RECV_BLOCKED| state. After these two threads are in the proper state, it will thus perform IPC communication. This technique avoids buffering in the kernel (cause no need for maintaining a buffer or queue for recv / send), the management and the copying cost between two thread.\cite{nourai2005aphysically}
+L4 provides a single system call for all IPC, F9 microkernel follow the implementation from L4\cite{dannowski2011l4}, the IPC was implemented in synchronous IPC, means that when a thread want to communicate with another thread, it will first set sender into the \verb|SEND_BLOCKED| state, then waiting for target receiver goes into the \verb|RECV_BLOCKED| state. After these two threads are in the proper state, it will thus perform IPC communication. This technique avoids buffering in the kernel (cause no need for maintaining a buffer or queue for recv / send), the management and the copying cost between two thread.\cite{nourai2005aphysically}
+
+Also, the user defined interrupt in was passing through IPC in 
 
 F9 microkernel introduce two different IPC register - message register and buffer register. The message register is a virtual register that can only be read one time, after one read, the value in this message register will be undefined. First introduced the concept in pistachio\cite{nourai2005aphysically}, Message register can be moderate-size and now F9 microkernel implement 4 type of items: Untyped, Typed, Map, Grant item.
+
+\subsection{Threads}
+
+
 
 \subsection{scheduler}
 
