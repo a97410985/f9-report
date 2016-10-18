@@ -9,12 +9,25 @@ The LaTeX class file is come form ACM SIGPLAN Format, you can download and found
 
 This report is currently using `IEEEtran` bibliographystyle with `numbers,square,comma,sort&compress` for citestyle.
 
+## Requirements
+
+* texlive
+* texlive-latex-extra
+
+### Ubuntu
+
+```
+apt-get install texlive
+apt-get install texlive-latex-extra
+```
+
+### Archlinux
+
+```
+pacman -S texlive-most
+```
 
 ## Building f9-report
-
-Building f9-report requrire `latex` and `pdflatex`, make sure you already install these packages.
-
-
 
 Genereate pdf report:
 
